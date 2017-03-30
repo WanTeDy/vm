@@ -19,13 +19,11 @@ namespace VirtualMachinesForm
 {
     public partial class Form1 : Form
     {
-        //private string groupName = "myResourceGroup";
         private string VMName = "SimpleWinVM";
-
-        private static List<VMModel> resources;
         private string subscriptionId = "a755ef57-8bdd-447e-bd18-9f89ae802903";
         private string deploymentName = "MyDeployment";
         private string location = "UKSouth";
+        private static List<VMModel> resources;
         private TokenCredentials credential;
 
         public static List<VMModel> Resources { get { return resources = resources ?? new List<VMModel>(); } }
@@ -35,21 +33,30 @@ namespace VirtualMachinesForm
             InitializeComponent();
         }
 
-        private async void Form1_Load(object sender, EventArgs e)
+        private void Form1_Load(object sender, EventArgs e)
         {
             SetupButtonsState();
-            var token = await GetAccessTokenAsync();
-            credential = new TokenCredentials(token.AccessToken);
             JavaScriptSerializer serializer = new JavaScriptSerializer();
             resources = serializer.Deserialize<List<VMModel>>(FileHelper.GetString());
             //Resources.Add(new VMModel { ResourceGroupName = "chrome2" });
             UpdateData();
         }
 
+        private async void UpdateCredentials()
+        {
+            var token = await GetAccessTokenAsync();
+            credential = new TokenCredentials(token.AccessToken);
+            Thread.Sleep(1200000);
+        }
+
         private void UpdateData()
         {
+            Thread threadCredentials = new Thread(UpdateCredentials);
             Thread thread = new Thread(UpdateGrid);
-            thread.IsBackground = true;
+
+            thread.IsBackground = threadCredentials.IsBackground = true;
+
+            threadCredentials.Start();
             thread.Start();
         }
 
@@ -130,7 +137,6 @@ namespace VirtualMachinesForm
             string deploymentName,
             string subscriptionId)
         {
-
             var resourceManagementClient = new ResourceManagementClient(credential)
             { SubscriptionId = subscriptionId };
 
@@ -139,7 +145,7 @@ namespace VirtualMachinesForm
             {
                 Mode = DeploymentMode.Incremental,
                 //TemplateLink = new TemplateLink("https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/101-vm-simple-windows/azuredeploy.json"),
-                Template = File.ReadAllText("..\\GlobalParameterstest2.json").Replace("osDiskblob", "osDisk-" + groupName), 
+                Template = File.ReadAllText("..\\GlobalParameterstest4.json").Replace("osDiskblob", "osDisk-" + groupName),
                 //Template = File.ReadAllText("..\\GlobalParameters.json"),
                 Parameters = File.ReadAllText("..\\Parameters.json").Replace("mydns", groupName)
             };
@@ -254,7 +260,6 @@ namespace VirtualMachinesForm
             { SubscriptionId = subscriptionId };
 
             await computeManagementClient.VirtualMachines.PowerOffAsync(groupName, vmName);
-
             //var image = new Image("UKSouth")
             //{
             //    StorageProfile = new ImageStorageProfile()
@@ -283,7 +288,6 @@ namespace VirtualMachinesForm
             { SubscriptionId = subscriptionId };
             await computeManagementClient.VirtualMachines.StartAsync(groupName, vmName);
         }
-
 
         //Рестарт виртуальной машины
         //public static async void RestartVirtualMachineAsync(
@@ -316,14 +320,12 @@ namespace VirtualMachinesForm
             var input = new InputResourceGroupName();
             input.Activate();
             input.ShowDialog(this);
-            if (String.IsNullOrEmpty(input.GroupName))
-            {
-                return;
-            }
+            if (String.IsNullOrEmpty(input.GroupName)) return;
             addVMButton.Enabled = false;
             WaitForm waitform = new WaitForm();
             waitform.Message = "Подождите, идет создание ресурсов...";
             waitform.Start();
+            string message = "";
             try
             {
                 var rgResult = await CreateResourceGroupAsync(credential, input.GroupName, subscriptionId, location);
@@ -337,8 +339,7 @@ namespace VirtualMachinesForm
                         subscriptionId);
                     if (dpResult.Properties.ProvisioningState == "Succeeded")
                     {
-                        waitform.Stop();
-                        MessageBox.Show("Ресурсы успешно созданы", "Message CreateResourceGroupAsync", MessageBoxButtons.OK);
+                        message = "Ресурсы успешно созданы";
                         Resources.Add(new VMModel { ResourceGroupName = input.GroupName });
                     }
                     else
@@ -347,22 +348,26 @@ namespace VirtualMachinesForm
                             credential,
                             input.GroupName,
                             subscriptionId);
-                        waitform.Stop();
-                        MessageBox.Show("Ресурсы не удалось создать, попробуйте позже", "Message CreateResourceGroupAsync", MessageBoxButtons.OK);
+                        message = "Ресурсы не удалось создать, попробуйте позже";
                     }
                 }
                 else
-                {
-                    waitform.Stop();
-                    MessageBox.Show("Группу ресурсов не удалось создать", "Message CreateResourceGroupAsync", MessageBoxButtons.OK);
-                }
+                    message = "Группу ресурсов не удалось создать";
             }
             catch
             {
-                MessageBox.Show("Группу ресурсов не удалось создать", "Message CreateResourceGroupAsync", MessageBoxButtons.OK);
-                waitform.Stop();
+                DeleteResourceGroupAsync(
+                            credential,
+                            input.GroupName,
+                            subscriptionId);
+                message = "Группу ресурсов не удалось создать";
             }
-            addVMButton.Enabled = true;
+            finally
+            {
+                waitform.Stop();
+                MessageBox.Show(message, "VMManager", MessageBoxButtons.OK);
+                addVMButton.Enabled = true;
+            }
         }
 
         private void deleteVMButton_Click(object sender, EventArgs e)

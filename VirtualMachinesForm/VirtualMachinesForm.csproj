@@ -139,8 +139,9 @@
     <EmbeddedResource Include="WaitForm.resx">
       <DependentUpon>WaitForm.cs</DependentUpon>
     </EmbeddedResource>
-    <None Include="bin\GlobalParameterstest2.json" />
     <None Include="bin\GlobalParameterstest.json" />
+    <None Include="bin\GlobalParameterstest4.json" />
+    <None Include="bin\GlobalParameterstest3.json" />
     <None Include="bin\Parameters.json" />
     <None Include="GlobalParameterstest.json" />
     <None Include="GlobalParameterstest2.json" />
