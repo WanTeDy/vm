@@ -37,7 +37,7 @@
             this.startVMButton = new System.Windows.Forms.RibbonButton();
             this.stopVMButton = new System.Windows.Forms.RibbonButton();
             this.stopAllButton = new System.Windows.Forms.RibbonButton();
-            this.ribbonButton1 = new System.Windows.Forms.RibbonButton();
+            this.rdpButton = new System.Windows.Forms.RibbonButton();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.dataGridView = new System.Windows.Forms.DataGridView();
             this.tabControl1 = new System.Windows.Forms.TabControl();
@@ -97,7 +97,7 @@
             this.ribbonPanel1.Items.Add(this.startVMButton);
             this.ribbonPanel1.Items.Add(this.stopVMButton);
             this.ribbonPanel1.Items.Add(this.stopAllButton);
-            this.ribbonPanel1.Items.Add(this.ribbonButton1);
+            this.ribbonPanel1.Items.Add(this.rdpButton);
             this.ribbonPanel1.Text = "";
             // 
             // addVMButton
@@ -135,12 +135,12 @@
             this.stopAllButton.Text = "Остановить все";
             this.stopAllButton.Click += new System.EventHandler(this.stopAllButton_Click);
             // 
-            // ribbonButton1
+            // rdpButton
             // 
-            this.ribbonButton1.Image = ((System.Drawing.Image)(resources.GetObject("ribbonButton1.Image")));
-            this.ribbonButton1.SmallImage = ((System.Drawing.Image)(resources.GetObject("ribbonButton1.SmallImage")));
-            this.ribbonButton1.Text = "Подключиться";
-            this.ribbonButton1.Click += new System.EventHandler(this.rdpButton_Click);
+            this.rdpButton.Image = ((System.Drawing.Image)(resources.GetObject("rdpButton.Image")));
+            this.rdpButton.SmallImage = ((System.Drawing.Image)(resources.GetObject("rdpButton.SmallImage")));
+            this.rdpButton.Text = "Подключиться";
+            this.rdpButton.Click += new System.EventHandler(this.rdpButton_Click);
             // 
             // tabPage1
             // 
@@ -160,9 +160,12 @@
             this.dataGridView.Location = new System.Drawing.Point(3, 3);
             this.dataGridView.MultiSelect = false;
             this.dataGridView.Name = "dataGridView";
+            this.dataGridView.ReadOnly = true;
+            this.dataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dataGridView.Size = new System.Drawing.Size(869, 300);
             this.dataGridView.TabIndex = 0;
             this.dataGridView.DataBindingComplete += new System.Windows.Forms.DataGridViewBindingCompleteEventHandler(this.dataGridView_DataBindingComplete);
+            this.dataGridView.SelectionChanged += new System.EventHandler(this.dataGridView_SelectionChanged);
             // 
             // tabControl1
             // 
@@ -232,7 +235,7 @@
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.DataGridView dataGridView;
         private System.Windows.Forms.TabControl tabControl1;
-        private System.Windows.Forms.RibbonButton ribbonButton1;
+        private System.Windows.Forms.RibbonButton rdpButton;
         private System.Windows.Forms.RibbonPanel ribbonPanel4;
         private System.Windows.Forms.RibbonButton ribbonButton6;
         private System.Windows.Forms.RibbonButton ribbonButton5;

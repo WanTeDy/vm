@@ -5,5 +5,5 @@
     "adminUserName": { "value": "mytestacct1" },
     "adminPassword": { "value": "Mytestpass1" },
     "dnsLabelPrefix": { "value": "mydns" }
-  }
+  },
 }

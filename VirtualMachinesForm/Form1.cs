@@ -37,11 +37,12 @@ namespace VirtualMachinesForm
 
         private async void Form1_Load(object sender, EventArgs e)
         {
+            SetupButtonsState();
             var token = await GetAccessTokenAsync();
             credential = new TokenCredentials(token.AccessToken);
             JavaScriptSerializer serializer = new JavaScriptSerializer();
             resources = serializer.Deserialize<List<VMModel>>(FileHelper.GetString());
-            //Resources.Add(new VMModel { ResourceGroupName = "testone" });
+            //Resources.Add(new VMModel { ResourceGroupName = "chrome2" });
             UpdateData();
         }
 
@@ -60,7 +61,15 @@ namespace VirtualMachinesForm
                 {
                     foreach (var item in Resources.ToList())
                     {
-                        item.VMStatus = await GetVirtualMachineStatusAsync(credential, item.ResourceGroupName, VMName, subscriptionId);
+                        try
+                        {
+                            item.VMStatus = await GetVirtualMachineStatusAsync(credential, item.ResourceGroupName, VMName, subscriptionId);
+                        }
+                        catch
+                        {
+                            //Resources.Remove(item);
+                            item.VMStatus = "VM not available";
+                        }
                     }
                     dataGridView.Invoke(new Action(() =>
                     {
@@ -72,7 +81,7 @@ namespace VirtualMachinesForm
                             col = dataGridView.SelectedCells[0].ColumnIndex;
                         }
                         dataGridView.DataSource = Resources.ToList();
-                        dataGridView.Refresh();
+                        //dataGridView.Refresh();
                         if (dataGridView.SelectedCells.Count > 0 && dataGridView.Rows.Count > row && dataGridView.ColumnCount > col)
                         {
                             dataGridView.Rows[row].Cells[col].Selected = true;
@@ -129,10 +138,11 @@ namespace VirtualMachinesForm
             deployment.Properties = new DeploymentProperties
             {
                 Mode = DeploymentMode.Incremental,
-                TemplateLink = new TemplateLink("https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/101-vm-simple-windows/azuredeploy.json"),
+                //TemplateLink = new TemplateLink("https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/101-vm-simple-windows/azuredeploy.json"),
+                Template = File.ReadAllText("..\\GlobalParameterstest2.json").Replace("osDiskblob", "osDisk-" + groupName), 
+                //Template = File.ReadAllText("..\\GlobalParameters.json"),
                 Parameters = File.ReadAllText("..\\Parameters.json").Replace("mydns", groupName)
             };
-
             return await resourceManagementClient.Deployments.CreateOrUpdateAsync(
               groupName,
               deploymentName,
@@ -163,7 +173,6 @@ namespace VirtualMachinesForm
               groupName,
               vmName,
               InstanceViewTypes.InstanceView);
-
             //Console.WriteLine("hardwareProfile");
             //Console.WriteLine("   vmSize: " + vmResult.HardwareProfile.VmSize);
 
@@ -243,7 +252,24 @@ namespace VirtualMachinesForm
         {
             var computeManagementClient = new ComputeManagementClient(credential)
             { SubscriptionId = subscriptionId };
+
             await computeManagementClient.VirtualMachines.PowerOffAsync(groupName, vmName);
+
+            //var image = new Image("UKSouth")
+            //{
+            //    StorageProfile = new ImageStorageProfile()
+            //    {
+            //        OsDisk = new ImageOSDisk()
+            //        {
+            //            OsType = OperatingSystemTypes.Windows,
+            //            OsState = OperatingSystemStateTypes.Generalized,
+            //            ManagedDisk = new Microsoft.Azure.Management.Compute.Models.SubResource("/subscriptions/a755ef57-8bdd-447e-bd18-9f89ae802903/resourceGroups/NEWGROUP1/providers/Microsoft.Compute/disks/SimpleWinVM_OsDisk_1_cfe9957945db428bb37a30b85447a429"),
+            //        }
+            //    }
+            //};
+            //await computeManagementClient.Images.CreateOrUpdateAsync(groupName, "imagechromenew", image);
+            //await computeManagementClient.VirtualMachines.DeallocateAsync(groupName, vmName);
+            //await computeManagementClient.VirtualMachines.CaptureAsync(groupName, vmName, new VirtualMachineCaptureParameters(vmName, groupName, true));
         }
 
         //запуск виртуальной машины
@@ -298,35 +324,43 @@ namespace VirtualMachinesForm
             WaitForm waitform = new WaitForm();
             waitform.Message = "Подождите, идет создание ресурсов...";
             waitform.Start();
-            var rgResult = await CreateResourceGroupAsync(credential, input.GroupName, subscriptionId, location);
-
-            if (rgResult.Properties.ProvisioningState == "Succeeded")
+            try
             {
-                var dpResult = await CreateTemplateDeploymentAsync(
-                    credential,
-                    input.GroupName,
-                    deploymentName,
-                    subscriptionId);
-                if (dpResult.Properties.ProvisioningState == "Succeeded")
+                var rgResult = await CreateResourceGroupAsync(credential, input.GroupName, subscriptionId, location);
+
+                if (rgResult.Properties.ProvisioningState == "Succeeded")
                 {
-                    waitform.Stop();
-                    MessageBox.Show("Ресурсы успешно созданы", "Message CreateResourceGroupAsync", MessageBoxButtons.OK);
-                    Resources.Add(new VMModel { ResourceGroupName = input.GroupName });
+                    var dpResult = await CreateTemplateDeploymentAsync(
+                        credential,
+                        input.GroupName,
+                        deploymentName,
+                        subscriptionId);
+                    if (dpResult.Properties.ProvisioningState == "Succeeded")
+                    {
+                        waitform.Stop();
+                        MessageBox.Show("Ресурсы успешно созданы", "Message CreateResourceGroupAsync", MessageBoxButtons.OK);
+                        Resources.Add(new VMModel { ResourceGroupName = input.GroupName });
+                    }
+                    else
+                    {
+                        DeleteResourceGroupAsync(
+                            credential,
+                            input.GroupName,
+                            subscriptionId);
+                        waitform.Stop();
+                        MessageBox.Show("Ресурсы не удалось создать, попробуйте позже", "Message CreateResourceGroupAsync", MessageBoxButtons.OK);
+                    }
                 }
                 else
                 {
-                    DeleteResourceGroupAsync(
-                        credential,
-                        input.GroupName,
-                        subscriptionId);
                     waitform.Stop();
-                    MessageBox.Show("Ресурсы не удалось создать, попробуйте позже", "Message CreateResourceGroupAsync", MessageBoxButtons.OK);
+                    MessageBox.Show("Группу ресурсов не удалось создать", "Message CreateResourceGroupAsync", MessageBoxButtons.OK);
                 }
             }
-            else
+            catch
             {
-                waitform.Stop();
                 MessageBox.Show("Группу ресурсов не удалось создать", "Message CreateResourceGroupAsync", MessageBoxButtons.OK);
+                waitform.Stop();
             }
             addVMButton.Enabled = true;
         }
@@ -351,9 +385,9 @@ namespace VirtualMachinesForm
 
         private void startVMButton_Click(object sender, EventArgs e)
         {
-            if (dataGridView.SelectedCells.Count > 0)
+            if (dataGridView.SelectedRows.Count > 0)
             {
-                string selectedGroupName = dataGridView.SelectedCells[0].OwningRow.Cells[0].Value as string;
+                string selectedGroupName = dataGridView.SelectedRows[0].Cells[0].Value as string;
                 StartVirtualMachineAsync(
                 credential,
                 selectedGroupName,
@@ -364,17 +398,63 @@ namespace VirtualMachinesForm
 
         private void stopVMButton_Click(object sender, EventArgs e)
         {
-            if (dataGridView.SelectedCells.Count > 0)
+            if (dataGridView.SelectedRows.Count > 0)
             {
                 DialogResult res = MessageBox.Show("Действительно остановить виртуальную машину?", "Message CreateResourceGroupAsync", MessageBoxButtons.OKCancel);
                 if (res == DialogResult.OK)
                 {
-                    string selectedGroupName = dataGridView.SelectedCells[0].OwningRow.Cells[0].Value as string;
+                    string selectedGroupName = dataGridView.SelectedRows[0].Cells[0].Value as string;
                     StopVirtualMachineAsync(
                     credential,
                     selectedGroupName,
                     VMName,
                     subscriptionId);
+                }
+            }
+        }
+        private void SetupButtonsState()
+        {
+            if (Resources.Count == 0)
+            {
+                startVMButton.Enabled = false;
+                stopVMButton.Enabled = false;
+                deleteVMButton.Enabled = false;
+                stopAllButton.Enabled = false;
+                rdpButton.Enabled = false;
+            }
+            else if (dataGridView.SelectedRows.Count > 0)
+            {
+                if (Resources.Any(x => x.VMStatus == "VM running"))
+                {
+                    stopAllButton.Enabled = true;
+                }
+                else
+                {
+                    stopAllButton.Enabled = false;
+                }
+                deleteVMButton.Enabled = true;
+                string selectedGroupName = dataGridView.SelectedRows[0].Cells[0].Value as string;
+                var group = Resources.FirstOrDefault(x => x.ResourceGroupName == selectedGroupName);
+                if (group != null)
+                {
+                    switch (group.VMStatus)
+                    {
+                        case "VM running":
+                            stopVMButton.Enabled = true;
+                            rdpButton.Enabled = true;
+                            startVMButton.Enabled = false;
+                            break;
+                        case "VM stopped":
+                            startVMButton.Enabled = true;
+                            stopVMButton.Enabled = false;
+                            rdpButton.Enabled = false;
+                            break;
+                        default:
+                            stopVMButton.Enabled = false;
+                            startVMButton.Enabled = false;
+                            rdpButton.Enabled = false;
+                            break;
+                    }
                 }
             }
         }
@@ -384,6 +464,7 @@ namespace VirtualMachinesForm
             this.dataGridView.Columns[0].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
             //this.dataGridView.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
             this.dataGridView.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            SetupButtonsState();
         }
 
         private void stopAllButton_Click(object sender, EventArgs e)
@@ -407,9 +488,9 @@ namespace VirtualMachinesForm
 
         private void rdpButton_Click(object sender, EventArgs e)
         {
-            if (dataGridView.SelectedCells.Count > 0)
+            if (dataGridView.SelectedRows.Count > 0)
             {
-                string selectedGroupName = dataGridView.SelectedCells[0].OwningRow.Cells[0].Value as string;
+                string selectedGroupName = dataGridView.SelectedRows[0].Cells[0].Value as string;
 
                 System.Diagnostics.Process process = new System.Diagnostics.Process();
                 System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo();
@@ -419,6 +500,11 @@ namespace VirtualMachinesForm
                 process.StartInfo = startInfo;
                 process.Start();
             }
+        }
+
+        private void dataGridView_SelectionChanged(object sender, EventArgs e)
+        {
+            SetupButtonsState();
         }
     }
 }
