@@ -1,1 +1,1 @@
-[{"ResourceGroupName":"chrome2","VMStatus":"VM running"}]
+[{"ResourceGroupName":"chrome4","VMStatus":"VM generalized"},{"ResourceGroupName":"chrome7","VMStatus":"VM running"},{"ResourceGroupName":"chromenew1","VMStatus":"VM generalized"}]
