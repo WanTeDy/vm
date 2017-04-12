@@ -139,13 +139,13 @@
         "storageProfile": {
           "osDisk": {
             "osType": "Windows",
-            "name": "prefix-osDisk.cfad761a-88dc-4807-b546-2981dda8e4a8.vhd",
+            "name": "prefix-osDisk.5855119b-6780-4783-a277-e321c17d2be0.vhd",
             "createOption": "FromImage",
             "image": {
-              "uri": "https://newvmgroupdisks994.blob.core.windows.net/system/Microsoft.Compute/Images/conteiner/prefix-osDisk.cfad761a-88dc-4807-b546-2981dda8e4a8.vhd"
+              "uri": "https://newvmgroupdisks994.blob.core.windows.net/system/Microsoft.Compute/Images/another/prefix-osDisk.5855119b-6780-4783-a277-e321c17d2be0.vhd"
             },
             "vhd": {
-              "uri": "https://newvmgroupdisks994.blob.core.windows.net/vmcontainer7f1068bd-4daf-4976-94e4-b259ca8ad07c/osDiskblob-copy.7f1068bd-4daf-4976-94e4-b259ca8ad07c.vhd"
+              "uri": "https://newvmgroupdisks994.blob.core.windows.net/vmcontainer62dac348-4e31-44be-8414-c51bc6f39d26/osDiskblob-copy.62dac348-4e31-44be-8414-c51bc6f39d26.vhd"
             },
             "caching": "ReadWrite"
           }

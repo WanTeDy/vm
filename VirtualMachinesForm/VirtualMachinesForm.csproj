@@ -114,6 +114,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StaticAuth.cs" />
+    <Compile Include="ApplicationParametersModel.cs" />
     <Compile Include="VMModel.cs" />
     <Compile Include="WaitForm.cs">
       <SubType>Form</SubType>
@@ -139,10 +140,13 @@
     <EmbeddedResource Include="WaitForm.resx">
       <DependentUpon>WaitForm.cs</DependentUpon>
     </EmbeddedResource>
+    <None Include="bin\Debugapplication.json" />
+    <None Include="bin\Releaseapplication.json" />
     <None Include="bin\GlobalParameterstest.json" />
     <None Include="bin\GlobalParameterstest4.json" />
     <None Include="bin\GlobalParameterstest3.json" />
     <None Include="bin\Parameters.json" />
+    <None Include="Debugapplication.json" />
     <None Include="GlobalParameters.json" />
     <None Include="GlobalParameterstest.json" />
     <None Include="GlobalParameterstest2.json" />

@@ -23,6 +23,7 @@ namespace VirtualMachinesForm
         private string subscriptionId = "a755ef57-8bdd-447e-bd18-9f89ae802903";
         private string deploymentName = "MyDeployment";
         private string location = "UKSouth";
+        private static ApplicationParametersModel appParameters { get; set; }
         private static List<VMModel> resources;
         private TokenCredentials credential;
 
@@ -38,15 +39,24 @@ namespace VirtualMachinesForm
             SetupButtonsState();
             JavaScriptSerializer serializer = new JavaScriptSerializer();
             resources = serializer.Deserialize<List<VMModel>>(FileHelper.GetString());
+            appParameters = serializer.Deserialize<ApplicationParametersModel>(FileHelper.GetString("application.json"));
             //Resources.Add(new VMModel { ResourceGroupName = "chrome2" });
             UpdateData();
         }
 
         private async void UpdateCredentials()
         {
-            var token = await GetAccessTokenAsync();
-            credential = new TokenCredentials(token.AccessToken);
-            Thread.Sleep(1200000);
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                credential = new TokenCredentials(token.AccessToken);
+                Thread.Sleep(600000);
+            }
+            catch
+            {
+                MessageBox.Show("ApplicationId неправильный или не имеет доступа!", "VMManager", MessageBoxButtons.OK);
+            }
+
         }
 
         private void UpdateData()
@@ -109,7 +119,7 @@ namespace VirtualMachinesForm
         //Получение доступа к ажуру
         private static async Task<AuthenticationResult> GetAccessTokenAsync()
         {
-            var cc = new ClientCredential("1597f28e-de84-470f-b86b-78253fc82a66", "KxwTIcBMyVdUnp3XSnIpmLNdvOj0X5KAl7GWQtYexUs=");
+            var cc = new ClientCredential(appParameters.ApplicationId, appParameters.ApplicationSecret);
             var context = new AuthenticationContext("https://login.windows.net/aa05c4a5-1597-45ee-8470-42adb07f7817");
             return await context.AcquireTokenAsync("https://management.azure.com/", cc);
         }

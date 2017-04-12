@@ -15,12 +15,13 @@ namespace VirtualMachinesForm.Helpers
             using (StreamWriter sw = new StreamWriter(path, false, System.Text.Encoding.Default))
             {
                 sw.WriteLine(str);
+                sw.Close();
             }
         }
 
-        public static string GetString()
+        public static string GetString(string filename = "resource.txt")
         {
-            string path = Directory.GetCurrentDirectory() + "resource.txt";
+            string path = Directory.GetCurrentDirectory() + filename;
             if (File.Exists(path))
             {
                 using (StreamReader sr = new StreamReader(path, System.Text.Encoding.Default))
@@ -28,7 +29,7 @@ namespace VirtualMachinesForm.Helpers
                     return sr.ReadToEnd();
                 }
             }
-            return "";
+            return "[]";
         }
     }
 }
