@@ -38,8 +38,14 @@ namespace VirtualMachinesForm
         {
             SetupButtonsState();
             JavaScriptSerializer serializer = new JavaScriptSerializer();
-            resources = serializer.Deserialize<List<VMModel>>(FileHelper.GetString());
-            appParameters = serializer.Deserialize<ApplicationParametersModel>(FileHelper.GetString("application.json"));
+            try {
+                resources = serializer.Deserialize<List<VMModel>>(FileHelper.GetString());
+                appParameters = serializer.Deserialize<ApplicationParametersModel>(FileHelper.GetString("application.json"));
+            }
+            catch
+            {
+                MessageBox.Show("Файл с параметрами не найден или поврежден", "VMManager", MessageBoxButtons.OK);
+            }
             //Resources.Add(new VMModel { ResourceGroupName = "chrome2" });
             UpdateData();
         }
@@ -50,7 +56,6 @@ namespace VirtualMachinesForm
             {
                 var token = await GetAccessTokenAsync();
                 credential = new TokenCredentials(token.AccessToken);
-                Thread.Sleep(600000);
             }
             catch
             {
@@ -61,12 +66,12 @@ namespace VirtualMachinesForm
 
         private void UpdateData()
         {
-            Thread threadCredentials = new Thread(UpdateCredentials);
+            //Thread threadCredentials = new Thread(UpdateCredentials);
             Thread thread = new Thread(UpdateGrid);
 
-            thread.IsBackground = threadCredentials.IsBackground = true;
+            thread.IsBackground = /*threadCredentials.IsBackground =*/ true;
 
-            threadCredentials.Start();
+            //threadCredentials.Start();
             thread.Start();
         }
 
@@ -76,6 +81,7 @@ namespace VirtualMachinesForm
             {
                 if (Resources != null)
                 {
+                    UpdateCredentials();
                     foreach (var item in Resources.ToList())
                     {
                         try
@@ -106,7 +112,7 @@ namespace VirtualMachinesForm
                     }));
                     SaveGroupStates();
                 }
-                Thread.Sleep(1000);
+                Thread.Sleep(2000);
             }
         }
 

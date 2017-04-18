@@ -147,10 +147,6 @@
     <None Include="bin\GlobalParameterstest3.json" />
     <None Include="bin\Parameters.json" />
     <None Include="Debugapplication.json" />
-    <None Include="GlobalParameters.json" />
-    <None Include="GlobalParameterstest.json" />
-    <None Include="GlobalParameterstest2.json" />
-    <None Include="GlobalParameterstest3.json" />
     <None Include="GlobalParameterstest4.json" />
     <None Include="packages.config" />
     <None Include="Parameters.json" />

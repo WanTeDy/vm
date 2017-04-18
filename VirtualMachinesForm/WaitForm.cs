@@ -37,9 +37,10 @@ namespace VirtualMachinesForm
 
         public void Stop()
         {
-            if(thread != null)
-                thread.Abort();
             Close();
+
+            //if (thread != null)
+            //    thread.Abort();
         }
     }
 }
