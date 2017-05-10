@@ -275,7 +275,8 @@ namespace VirtualMachinesForm
             var computeManagementClient = new ComputeManagementClient(credential)
             { SubscriptionId = subscriptionId };
 
-            await computeManagementClient.VirtualMachines.PowerOffAsync(groupName, vmName);
+            await computeManagementClient.VirtualMachines.DeallocateAsync(groupName, vmName);
+            //await computeManagementClient.VirtualMachines.PowerOffAsync(groupName, vmName);
             //var image = new Image("UKSouth")
             //{
             //    StorageProfile = new ImageStorageProfile()
@@ -466,6 +467,11 @@ namespace VirtualMachinesForm
                             startVMButton.Enabled = false;
                             break;
                         case "VM stopped":
+                            startVMButton.Enabled = true;
+                            stopVMButton.Enabled = false;
+                            rdpButton.Enabled = false;
+                            break;
+                        case "VM deallocated":
                             startVMButton.Enabled = true;
                             stopVMButton.Enabled = false;
                             rdpButton.Enabled = false;
