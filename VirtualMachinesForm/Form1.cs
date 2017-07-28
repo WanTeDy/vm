@@ -4,6 +4,9 @@ using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Microsoft.Azure.Management.ResourceManager;
 using Microsoft.Azure.Management.ResourceManager.Models;
 using Microsoft.Rest;
+using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 using System.IO;
 using System.Windows.Forms;
 using System.Threading.Tasks;
@@ -38,7 +41,8 @@ namespace VirtualMachinesForm
         {
             SetupButtonsState();
             JavaScriptSerializer serializer = new JavaScriptSerializer();
-            try {
+            try
+            {
                 resources = serializer.Deserialize<List<VMModel>>(FileHelper.GetString());
                 appParameters = serializer.Deserialize<ApplicationParametersModel>(FileHelper.GetString("application.json"));
             }
@@ -48,6 +52,7 @@ namespace VirtualMachinesForm
             }
             //Resources.Add(new VMModel { ResourceGroupName = "chrome2" });
             UpdateData();
+            ThreadPool.QueueUserWorkItem((x) => DeleteAllStorageVHD());
         }
 
         private async void UpdateCredentials()
@@ -112,7 +117,7 @@ namespace VirtualMachinesForm
                     }));
                     SaveGroupStates();
                 }
-                Thread.Sleep(2000);
+                Thread.Sleep(3000);
             }
         }
 
@@ -180,6 +185,60 @@ namespace VirtualMachinesForm
             var resourceManagementClient = new ResourceManagementClient(credential)
             { SubscriptionId = subscriptionId };
             await resourceManagementClient.ResourceGroups.DeleteAsync(groupName);
+        }
+
+        //Удаление диска
+        public static void DeleteStorageVHD(string groupName)
+        {
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(CloudConfigurationManager.GetSetting("StorageConnectionString"));
+            // Create the blob client.
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+
+            // Retrieve reference to a previously created container.
+            CloudBlobContainer container = blobClient.GetContainerReference("vmcontainerd7962b02-629a-468a-a901-266a6e53cf77");
+            // Loop over items within the container and output the length and URI.
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference("osDisk-" + groupName + "-copy.d7962b02-629a-468a-a901-266a6e53cf77.vhd");
+
+            // Delete the blob.
+            blockBlob.Delete();
+
+            //foreach (IListBlobItem item in container.ListBlobs(null, false))
+            //{
+            //    CloudPageBlob pageBlob = item as CloudPageBlob;
+            //    if (pageBlob != null)
+            //    {
+            //        try
+            //        {
+            //            pageBlob.DeleteAsync();
+            //        }
+            //        catch { }
+            //    }
+            //}
+        }
+
+        //Удаление всех дисков
+        public static void DeleteAllStorageVHD()
+        {
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(CloudConfigurationManager.GetSetting("StorageConnectionString"));
+            // Create the blob client.
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+
+            // Retrieve reference to a previously created container.
+            CloudBlobContainer container = blobClient.GetContainerReference("vmcontainerd7962b02-629a-468a-a901-266a6e53cf77");
+            // Loop over items within the container and output the length and URI.
+
+            foreach (IListBlobItem item in container.ListBlobs(null, false))
+            {
+                CloudPageBlob pageBlob = item as CloudPageBlob;
+                if (pageBlob != null)
+                {
+                    try
+                    {
+                        pageBlob.Delete();
+                    }
+                    catch { }
+                }
+            }
         }
 
         //Получение информации о виртуальной машине
@@ -401,6 +460,36 @@ namespace VirtualMachinesForm
                         subscriptionId);
                     var item = Resources.FirstOrDefault(x => x.ResourceGroupName == selectedGroupName);
                     Resources.Remove(item);
+                    DeleteBlobsThread(selectedGroupName);
+                }
+            }
+        }
+
+        private void DeleteBlobsThread(string name)
+        {
+            //Thread threadCredentials = new Thread(UpdateCredentials);
+            Thread thread = new Thread(DeleteBlobs);
+
+            thread.IsBackground = /*threadCredentials.IsBackground =*/ true;
+
+            //threadCredentials.Start();
+            thread.Start(name);
+        }
+
+        private async void DeleteBlobs(object name)
+        {
+            var success = false;
+            var selectedGroupName = name as String;
+            while (!success)
+            {
+                try
+                {
+                    DeleteStorageVHD(selectedGroupName);                    
+                    success = true;
+                }
+                catch
+                {
+                    Thread.Sleep(5000);
                 }
             }
         }
