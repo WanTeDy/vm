@@ -26,6 +26,7 @@ namespace VirtualMachinesForm
         private string subscriptionId = "a755ef57-8bdd-447e-bd18-9f89ae802903";
         private string deploymentName = "MyDeployment";
         private string location = "UKSouth";
+        private bool shownModal = false;
         private static ApplicationParametersModel appParameters { get; set; }
         private static List<VMModel> resources;
         private TokenCredentials credential;
@@ -50,7 +51,7 @@ namespace VirtualMachinesForm
             {
                 MessageBox.Show("Файл с параметрами не найден или поврежден", "VMManager", MessageBoxButtons.OK);
             }
-            //Resources.Add(new VMModel { ResourceGroupName = "chrome2" });
+            //Resources.Add(new VMModel { ResourceGroupName = "tested" });
             UpdateData();
             ThreadPool.QueueUserWorkItem((x) => DeleteAllStorageVHD());
         }
@@ -64,9 +65,13 @@ namespace VirtualMachinesForm
             }
             catch
             {
-                MessageBox.Show("ApplicationId неправильный или не имеет доступа!", "VMManager", MessageBoxButtons.OK);
+                if (!shownModal)
+                {
+                    shownModal = true;
+                    MessageBox.Show("ApplicationId неправильный или не имеет доступа! Либо нет подключения к интернету", "VMManager", MessageBoxButtons.OK);
+                    shownModal = false;
+                }
             }
-
         }
 
         private void UpdateData()
@@ -84,9 +89,9 @@ namespace VirtualMachinesForm
         {
             while (true)
             {
+                UpdateCredentials();
                 if (Resources != null)
                 {
-                    UpdateCredentials();
                     foreach (var item in Resources.ToList())
                     {
                         try
@@ -131,7 +136,7 @@ namespace VirtualMachinesForm
         private static async Task<AuthenticationResult> GetAccessTokenAsync()
         {
             var cc = new ClientCredential(appParameters.ApplicationId, appParameters.ApplicationSecret);
-            var context = new AuthenticationContext("https://login.windows.net/aa05c4a5-1597-45ee-8470-42adb07f7817");
+            var context = new AuthenticationContext("https://login.windows.net/aa05c4a5-1597-45ee-8470-42adb07f7817", null);
             return await context.AcquireTokenAsync("https://management.azure.com/", cc);
         }
 
@@ -219,26 +224,29 @@ namespace VirtualMachinesForm
         //Удаление всех дисков
         public static void DeleteAllStorageVHD()
         {
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(CloudConfigurationManager.GetSetting("StorageConnectionString"));
-            // Create the blob client.
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-
-            // Retrieve reference to a previously created container.
-            CloudBlobContainer container = blobClient.GetContainerReference("vmcontainerd7962b02-629a-468a-a901-266a6e53cf77");
-            // Loop over items within the container and output the length and URI.
-
-            foreach (IListBlobItem item in container.ListBlobs(null, false))
+            try
             {
-                CloudPageBlob pageBlob = item as CloudPageBlob;
-                if (pageBlob != null)
+                CloudStorageAccount storageAccount = CloudStorageAccount.Parse(CloudConfigurationManager.GetSetting("StorageConnectionString"));
+                // Create the blob client.
+                CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+                // Retrieve reference to a previously created container.
+                CloudBlobContainer container = blobClient.GetContainerReference("vmcontainerd7962b02-629a-468a-a901-266a6e53cf77");
+                // Loop over items within the container and output the length and URI.
+
+                foreach (IListBlobItem item in container.ListBlobs(null, false))
                 {
-                    try
+                    CloudPageBlob pageBlob = item as CloudPageBlob;
+                    if (pageBlob != null)
                     {
-                        pageBlob.Delete();
+                        try
+                        {
+                            pageBlob.Delete();
+                        }
+                        catch { }
                     }
-                    catch { }
                 }
             }
+            catch { }
         }
 
         //Получение информации о виртуальной машине
@@ -460,7 +468,7 @@ namespace VirtualMachinesForm
                         subscriptionId);
                     var item = Resources.FirstOrDefault(x => x.ResourceGroupName == selectedGroupName);
                     Resources.Remove(item);
-                    DeleteBlobsThread(selectedGroupName);
+                    //DeleteBlobsThread(selectedGroupName);
                 }
             }
         }
@@ -484,7 +492,7 @@ namespace VirtualMachinesForm
             {
                 try
                 {
-                    DeleteStorageVHD(selectedGroupName);                    
+                    DeleteStorageVHD(selectedGroupName);
                     success = true;
                 }
                 catch
