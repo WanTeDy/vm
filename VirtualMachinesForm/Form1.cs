@@ -17,6 +17,7 @@ using Microsoft.Azure.Management.Compute;
 using Microsoft.Azure.Management.Compute.Models;
 using System.Web.Script.Serialization;
 using VirtualMachinesForm.Helpers;
+using System.Diagnostics;
 
 namespace VirtualMachinesForm
 {
@@ -30,6 +31,7 @@ namespace VirtualMachinesForm
         private static ApplicationParametersModel appParameters { get; set; }
         private static List<VMModel> resources;
         private TokenCredentials credential;
+        private JavaScriptSerializer serializer;
 
         public static List<VMModel> Resources { get { return resources = resources ?? new List<VMModel>(); } }
 
@@ -40,20 +42,23 @@ namespace VirtualMachinesForm
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            SetupButtonsState();
-            JavaScriptSerializer serializer = new JavaScriptSerializer();
+            serializer = new JavaScriptSerializer();
             try
             {
                 resources = serializer.Deserialize<List<VMModel>>(FileHelper.GetString());
                 appParameters = serializer.Deserialize<ApplicationParametersModel>(FileHelper.GetString("application.json"));
             }
-            catch
+            catch (Exception exp)
             {
+                Trace.TraceInformation("Failed deserialization resources and application params");
+                TraceHelper.TraceException(exp);
                 MessageBox.Show("Файл с параметрами не найден или поврежден", "VMManager", MessageBoxButtons.OK);
             }
-            //Resources.Add(new VMModel { ResourceGroupName = "tested" });
             UpdateData();
+            SetupButtonsState();
             ThreadPool.QueueUserWorkItem((x) => DeleteAllStorageVHD());
+            ThreadPool.QueueUserWorkItem((x) => SaveGroupStates());
+            ThreadPool.QueueUserWorkItem((x) => SaveGroupStatesReserved());
         }
 
         private async void UpdateCredentials()
@@ -63,10 +68,12 @@ namespace VirtualMachinesForm
                 var token = await GetAccessTokenAsync();
                 credential = new TokenCredentials(token.AccessToken);
             }
-            catch
+            catch (Exception exp)
             {
                 if (!shownModal)
                 {
+                    Trace.TraceInformation("Failed update credentials");
+                    TraceHelper.TraceException(exp);
                     shownModal = true;
                     MessageBox.Show("ApplicationId неправильный или не имеет доступа! Либо нет подключения к интернету", "VMManager", MessageBoxButtons.OK);
                     shownModal = false;
@@ -120,16 +127,39 @@ namespace VirtualMachinesForm
                             dataGridView.Rows[row].Cells[col].Selected = true;
                         }
                     }));
-                    SaveGroupStates();
+                    //SaveGroupStates();
                 }
                 Thread.Sleep(3000);
             }
         }
 
+        private void SaveGroupStatesReserved()
+        {
+            Thread.Sleep(12000);
+            try
+            {
+                string path = Directory.GetCurrentDirectory() + "resource_copy.txt";
+                FileHelper.SaveString(serializer.Serialize(Resources), path);
+            }
+            catch (Exception exp)
+            {
+                Trace.TraceInformation("Failed save resources_copy");
+                TraceHelper.TraceException(exp);
+            }
+        }
+
         private void SaveGroupStates()
         {
-            JavaScriptSerializer serializer = new JavaScriptSerializer();
-            FileHelper.SaveString(serializer.Serialize(Resources));
+            try
+            {
+                FileHelper.SaveString(serializer.Serialize(Resources));
+            }
+            catch (Exception exp)
+            {
+                Trace.TraceInformation("Failed save resources");
+                TraceHelper.TraceException(exp);
+                Thread.Sleep(6000);
+            }
         }
 
         //Получение доступа к ажуру
@@ -246,7 +276,12 @@ namespace VirtualMachinesForm
                     }
                 }
             }
-            catch { }
+            catch (Exception exp)
+            {
+                Trace.TraceInformation("Failed deleting storage VHD's");
+                TraceHelper.TraceException(exp);
+            }
+            Thread.Sleep(60000);
         }
 
         //Получение информации о виртуальной машине
